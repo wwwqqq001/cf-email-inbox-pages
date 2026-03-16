@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cloudflare Mail Inbox</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar card">
+        <div class="brand">
+          <div class="brand__logo">✉</div>
+          <div>
+            <h1>Mail Inbox</h1>
+            <p>Cloudflare Email Workspace</p>
+          </div>
+        </div>
+
+        <button id="open-settings" class="button button--ghost button--full">连接设置</button>
+
+        <section class="sidebar__section">
+          <div class="section-title">
+            <span>收件箱</span>
+            <button id="reload-mailboxes" class="icon-button" title="刷新收件箱">↻</button>
+          </div>
+          <div id="mailbox-list" class="mailbox-list"></div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="toolbar card">
+          <div class="toolbar__left">
+            <input id="search-input" class="search-input" type="search" placeholder="搜索主题、发件人、摘要" />
+            <label class="toggle">
+              <input id="unread-only" type="checkbox" />
+              <span>仅未读</span>
+            </label>
+            <label class="toggle">
+              <input id="starred-only" type="checkbox" />
+              <span>仅星标</span>
+            </label>
+          </div>
+          <div class="toolbar__right">
+            <button id="refresh-emails" class="button button--secondary">刷新列表</button>
+            <span id="status-pill" class="status-pill">未连接</span>
+          </div>
+        </header>
+
+        <section class="content-grid">
+          <section class="mail-list card">
+            <div class="panel-header">
+              <div>
+                <h2 id="list-title">全部邮件</h2>
+                <p id="list-subtitle">配置连接后查看邮件</p>
+              </div>
+              <button id="load-more" class="button button--ghost">加载更多</button>
+            </div>
+            <div id="email-list" class="email-list empty-state">
+              <div>
+                <h3>等待连接</h3>
+                <p>请先配置 Worker API 地址与 Bearer Token。</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="mail-detail card">
+            <div class="panel-header">
+              <div>
+                <h2>邮件详情</h2>
+                <p id="detail-subtitle">选择左侧邮件查看内容</p>
+              </div>
+              <div class="detail-actions">
+                <button id="toggle-read" class="button button--ghost" disabled>标记已读</button>
+                <button id="toggle-star" class="button button--ghost" disabled>星标</button>
+                <button id="download-raw" class="button button--primary" disabled>下载 EML</button>
+              </div>
+            </div>
+
+            <div id="detail-empty" class="detail-empty">
+              <h3>还没有选中邮件</h3>
+              <p>从中间列表点击邮件，可查看正文、头部信息与附件概览。</p>
+            </div>
+
+            <article id="detail-card" class="detail-card hidden">
+              <header class="detail-card__header">
+                <div>
+                  <div class="detail-meta-row">
+                    <span id="detail-mailbox" class="badge"></span>
+                    <span id="detail-flags" class="badge badge--muted"></span>
+                  </div>
+                  <h3 id="detail-subject"></h3>
+                </div>
+                <p id="detail-date" class="detail-date"></p>
+              </header>
+
+              <dl class="detail-grid">
+                <div>
+                  <dt>发件人</dt>
+                  <dd id="detail-from"></dd>
+                </div>
+                <div>
+                  <dt>收件人</dt>
+                  <dd id="detail-to"></dd>
+                </div>
+                <div>
+                  <dt>抄送</dt>
+                  <dd id="detail-cc"></dd>
+                </div>
+                <div>
+                  <dt>Message-ID</dt>
+                  <dd id="detail-message-id"></dd>
+                </div>
+              </dl>
+
+              <div class="tabs">
+                <button class="tab is-active" data-view="html">HTML 预览</button>
+                <button class="tab" data-view="text">纯文本</button>
+                <button class="tab" data-view="headers">邮件头</button>
+                <button class="tab" data-view="attachments">附件</button>
+              </div>
+
+              <div id="view-html" class="tab-panel">
+                <iframe id="html-frame" title="HTML 邮件预览" sandbox=""></iframe>
+              </div>
+              <div id="view-text" class="tab-panel hidden">
+                <pre id="detail-text" class="pre-panel"></pre>
+              </div>
+              <div id="view-headers" class="tab-panel hidden">
+                <pre id="detail-headers" class="pre-panel"></pre>
+              </div>
+              <div id="view-attachments" class="tab-panel hidden">
+                <div id="detail-attachments" class="attachments-list"></div>
+              </div>
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="settings-dialog" class="settings-dialog">
+      <form id="settings-form" class="settings-form" method="dialog">
+        <div class="settings-form__header">
+          <div>
+            <h2>连接 Worker API</h2>
+            <p>这些设置只保存在当前浏览器的 localStorage 中。</p>
+          </div>
+          <button type="button" id="close-settings" class="icon-button">✕</button>
+        </div>
+
+        <label>
+          <span>API Base URL</span>
+          <input id="api-base-url" type="url" placeholder="https://your-worker.workers.dev" required />
+        </label>
+
+        <label>
+          <span>Bearer Token</span>
+          <input id="api-token" type="password" placeholder="输入 Worker API_TOKEN" required />
+        </label>
+
+        <menu class="settings-actions">
+          <button type="button" class="button button--ghost" id="clear-settings">清空</button>
+          <button type="submit" class="button button--primary">保存并连接</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
